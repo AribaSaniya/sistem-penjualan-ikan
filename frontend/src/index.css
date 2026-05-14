@@ -1,0 +1,369 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+
+:root {
+  /* Color Palette - Pure Blue Ocean Theme */
+  --background-dark: #020617; 
+  --secondary-color: #0F172A; 
+  --primary-color: #0EA5E9;   
+  --accent-color: #7DD3FC;    
+  
+  --text-light: #F8FAFC;
+  --text-main: #F8FAFC;
+  --text-muted: #94A3B8;
+  --glass-bg: rgba(15, 23, 42, 0.7);
+  --panel-bg: rgba(15, 23, 42, 0.6);
+  --input-bg: rgba(255, 255, 255, 0.03);
+  --border-color: rgba(125, 211, 252, 0.2);
+  --danger-color: #EF4444;
+  --danger-hover: #DC2626;
+  --border-radius: 12px;
+  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+
+  /* Gradients */
+  --gold-gradient: linear-gradient(135deg, #FDE68A 0%, #D4AF37 50%, #B8860B 100%);
+  --teal-gradient: linear-gradient(135deg, #0EA5E9 0%, #2DD4BF 100%);
+}
+
+
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+  100% { transform: translateY(0px); }
+}
+
+.float-card {
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.float-card:hover {
+  transform: translateY(-12px);
+  box-shadow: 0 20px 40px rgba(14, 165, 233, 0.3);
+}
+
+/* TOMBOL UTAMA (Beli Sekarang, Login, dll) - BIRU MUDA & PUTIH KRISTAL */
+.btn-primary, .btn-gold {
+  background: linear-gradient(135deg, #BAE6FD 0%, #FFFFFF 100%) !important;
+  color: #0369A1 !important;
+  font-weight: 800 !important;
+  border: 1px solid rgba(255,255,255,0.5) !important;
+  transition: 0.4s;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(186, 230, 253, 0.4) !important;
+  text-transform: uppercase;
+}
+
+.btn-primary:hover, .btn-gold:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 25px rgba(255, 255, 255, 0.6) !important;
+  filter: brightness(1.1);
+}
+
+/* TOMBOL NAVIGASI / FITUR (Bursa, Manajemen, dll) - TRANSPARAN */
+.btn-outline, .nav-item {
+  background: transparent !important;
+  color: #7DD3FC !important;
+  border: 1px solid rgba(125, 211, 252, 0.4) !important;
+  padding: 12px 20px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.btn-outline:hover {
+  background: rgba(125, 211, 252, 0.1) !important;
+  border-color: #7DD3FC !important;
+  transform: translateX(5px);
+}
+
+/* KEADAAN SAAT SUDAH DIKLIK (AKTIF) - MENJADI EMAS DENGAN PENDARAN BIRU KRISTAL MEWAH */
+.btn-outline.active, .btn-outline:active {
+  background: linear-gradient(135deg, #FFD700 0%, #B8860B 50%, #8A6D1B 100%) !important;
+  color: #000 !important;
+  border: none !important;
+  /* Layered Blue Crystal Glow */
+  box-shadow: 
+    0 0 10px rgba(125, 211, 252, 0.8), 
+    0 0 25px rgba(125, 211, 252, 0.5),
+    0 0 45px rgba(125, 211, 252, 0.3) !important; 
+  font-weight: 800 !important;
+  transform: scale(1.05) translateX(10px);
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+
+
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Outfit', sans-serif;
+}
+
+body {
+  margin: 0;
+  font-family: 'Outfit', 'Inter', sans-serif;
+  background-color: var(--background-dark);
+  background-image: 
+    radial-gradient(circle at 0% 0%, rgba(0, 166, 188, 0.15) 0%, transparent 50%),
+    radial-gradient(circle at 100% 100%, rgba(52, 211, 153, 0.1) 0%, transparent 50%);
+  color: var(--text-light);
+  min-height: 100vh;
+  background-attachment: fixed;
+  overflow-x: hidden;
+}
+
+/* Glassmorphism Panel Utility */
+.glass-panel {
+  background: var(--panel-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  box-shadow: var(--glass-shadow), inset 0 1px 0 rgba(0, 166, 188, 0.12);
+}
+
+/* Base Inputs */
+input, select, textarea {
+  width: 100%;
+  background: var(--input-bg);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  padding: 12px 16px;
+  border-radius: 8px;
+  outline: none;
+  transition: all 0.2s ease;
+  font-size: 1.1rem;
+}
+
+input::placeholder, textarea::placeholder {
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+
+select option {
+  background: var(--panel-bg-solid);
+  color: var(--text-main);
+}
+
+input:focus, select:focus, textarea:focus {
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 3px rgba(0, 166, 188, 0.2);
+}
+
+/* Base Buttons */
+button {
+  cursor: pointer;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 1.1rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #BAE6FD 0%, #FFFFFF 100%);
+  color: #0369A1 !important;
+  font-weight: 800;
+  padding: 12px 24px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.4);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(186, 230, 253, 0.3);
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 8px 25px rgba(186, 230, 253, 0.5);
+  filter: brightness(1.1);
+}
+
+.btn-primary:active {
+  transform: translateY(0) scale(0.98);
+  background: #FFFFFF !important;
+}
+
+.btn-accent {
+  background: var(--teal-gradient);
+  color: var(--text-main);
+  border: 1px solid var(--accent-color);
+}
+
+.btn-accent:hover:not(:disabled) {
+  background: linear-gradient(135deg, #1A566E 0%, #22728F 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 166, 188, 0.3);
+}
+
+.btn-danger {
+  background: var(--danger-color);
+  color: white;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: var(--danger-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(244, 63, 94, 0.3);
+}
+
+.btn-buy {
+  background: var(--gold-gradient);
+  color: var(--text-on-primary);
+  font-weight: 700;
+}
+
+.btn-buy:hover:not(:disabled) {
+  filter: brightness(1.15);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(201, 168, 76, 0.4);
+}
+
+.btn-outline {
+  background: transparent;
+  color: #7DD3FC;
+  border: 1px solid rgba(125, 211, 252, 0.4);
+  padding: 12px 20px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  letter-spacing: 1px;
+}
+
+.btn-outline:hover {
+  background: rgba(125, 211, 252, 0.1);
+  border-color: #7DD3FC;
+  transform: translateX(5px);
+  box-shadow: 0 0 15px rgba(125, 211, 252, 0.2);
+}
+
+
+
+/* Layout Utilities */
+/* Mobile Navigation */
+.mobile-nav {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 70px;
+  background: rgba(13, 33, 55, 0.95);
+  backdrop-filter: blur(20px);
+  border-top: 1px solid var(--border-color);
+  justify-content: space-around;
+  align-items: center;
+  z-index: 1000;
+  padding: 0 16px;
+}
+
+.mobile-nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  padding: 8px;
+  min-width: 60px;
+}
+
+.mobile-nav-item span {
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.desktop-sidebar {
+  width: 250px;
+  background: rgba(10, 22, 40, 0.95);
+  padding: 24px;
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  position: sticky;
+  top: 0;
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3);
+}
+
+@media (max-width: 768px) {
+  .desktop-sidebar {
+    display: none !important;
+  }
+  .mobile-nav {
+    display: flex;
+  }
+  .app-container {
+    flex-direction: column;
+  }
+  .main-content {
+    padding-bottom: 90px !important;
+  }
+  .glass-panel {
+    padding: 16px !important;
+  }
+}
+
+.app-container {
+  display: flex;
+  min-height: 100vh;
+}
+
+.main-content {
+  flex: 1;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Animation Utilities */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s ease-out forwards;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(10, 22, 40, 0.8);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 166, 188, 0.3);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-color);
+}
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
