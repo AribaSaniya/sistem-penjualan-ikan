@@ -34,7 +34,6 @@ interface Fish {
 
 export default function AdminSales() {
   const [merchants, setMerchants] = useState<Merchant[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   
   // Reviews State
@@ -59,7 +58,6 @@ export default function AdminSales() {
   });
 
   const fetchMerchants = async () => {
-    setLoading(true);
     try {
       const { data, error } = await supabase
         .from('merchants')
@@ -70,8 +68,6 @@ export default function AdminSales() {
       setMerchants(data || []);
     } catch (err) {
       console.error('Gagal mengambil data pedagang:', err);
-    } finally {
-      setLoading(false);
     }
   };
 

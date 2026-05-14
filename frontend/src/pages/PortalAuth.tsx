@@ -34,7 +34,7 @@ export default function PortalAuth() {
     setError('');
     setLoading(true);
     try {
-      let { data, error: loginError } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error: loginError } = await supabase.auth.signInWithPassword({ email, password });
       
       if (loginError) throw loginError;
 
@@ -162,7 +162,7 @@ export default function PortalAuth() {
         // Arahkan ke bursa ikan
         navigate('/');
       }
-    } catch (err: any) {
+    } catch {
       setError('Kode OTP salah atau sudah kadaluarsa.');
     } finally {
       setLoading(false);

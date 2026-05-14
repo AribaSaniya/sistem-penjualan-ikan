@@ -70,8 +70,9 @@ export default function AdminOrders() {
       const flattened: any[] = [];
       const pMap: Record<string, string> = {};
       ordersData?.forEach(o => {
-        if (o.user_id && o.profiles && o.profiles.name) {
-          pMap[o.user_id] = o.profiles.name;
+        const profileData = Array.isArray(o.profiles) ? o.profiles[0] : o.profiles;
+        if (o.user_id && profileData?.name) {
+          pMap[o.user_id] = profileData.name;
         }
         o.order_items?.forEach((it: any) => {
           flattened.push({ ...it, orders: { ...o } });

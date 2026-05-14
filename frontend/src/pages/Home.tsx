@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/useAuthStore';
-import { X, MessageCircle, Smile, Leaf } from 'lucide-react';
+import { X, Smile, Leaf } from 'lucide-react';
 import { supabase } from '../services/supabaseClient';
 import { useOrderStore } from '../store/useOrderStore';
 
@@ -18,7 +17,6 @@ interface Fish {
 export default function Home() {
   const { user } = useAuthStore();
   const { incrementCount } = useOrderStore();
-  const navigate = useNavigate();
   const [fishes, setFishes] = useState<Fish[]>([]);
   const [loading, setLoading] = useState(true);
 

@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuthStore } from '../store/useAuthStore';
 import { Upload, Trash2, ArrowLeft } from 'lucide-react';
 import { supabase } from '../services/supabaseClient';
 
