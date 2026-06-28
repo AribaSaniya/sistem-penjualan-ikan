@@ -19,6 +19,23 @@ interface RekapItem {
   };
 }
 
+interface OrderItemRecord {
+  id: number;
+  quantity_kg: number;
+  price_at_buy: number;
+  fish: { name: string } | { name: string }[];
+}
+
+interface OrderRecord {
+  id: number;
+  created_at: string;
+  status: string;
+  user_id: string;
+  total_amount: number;
+  profiles?: { name: string } | { name: string }[];
+  order_items: OrderItemRecord[];
+}
+
 
 
 export default function AdminOrders() {
@@ -53,8 +70,8 @@ export default function AdminOrders() {
         if (fbError) throw fbError;
         
         const flattened: RekapItem[] = [];
-        (fallbackData as any[] | null)?.forEach(o => {
-          o.order_items?.forEach((it: any) => {
+        (fallbackData as OrderRecord[] | null)?.forEach((o: OrderRecord) => {
+          o.order_items?.forEach((it: OrderItemRecord) => {
             const fishData = Array.isArray(it.fish) ? it.fish[0] : it.fish;
             flattened.push({ ...it, fish: fishData, orders: { ...o } } as RekapItem);
           });
@@ -73,12 +90,12 @@ export default function AdminOrders() {
       
       const flattened: RekapItem[] = [];
       const pMap: Record<string, string> = {};
-      (ordersData as any[] | null)?.forEach(o => {
+      (ordersData as OrderRecord[] | null)?.forEach((o: OrderRecord) => {
         const profileData = Array.isArray(o.profiles) ? o.profiles[0] : o.profiles;
         if (o.user_id && profileData?.name) {
           pMap[o.user_id] = profileData.name;
         }
-        o.order_items?.forEach((it: any) => {
+        o.order_items?.forEach((it: OrderItemRecord) => {
           const fishData = Array.isArray(it.fish) ? it.fish[0] : it.fish;
           flattened.push({ ...it, fish: fishData, orders: { ...o } } as RekapItem);
         });

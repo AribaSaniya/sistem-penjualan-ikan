@@ -18,6 +18,19 @@ interface MarketData {
   totalSoldKg: number;
 }
 
+interface ChartTooltipPayloadItem {
+  name?: string;
+  value?: number | string;
+  color?: string;
+  payload?: MarketData;
+}
+
+interface ChartTooltipProps {
+  active?: boolean;
+  payload?: ChartTooltipPayloadItem[];
+  label?: string;
+}
+
 export default function MarketChart() {
   const [data, setData] = useState<MarketData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -61,7 +74,7 @@ export default function MarketChart() {
     fetchData();
   }, []);
 
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  const CustomTooltip = ({ active, payload, label }: ChartTooltipProps) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload as MarketData;
       return (

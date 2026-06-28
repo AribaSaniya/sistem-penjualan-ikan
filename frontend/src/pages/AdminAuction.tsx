@@ -63,7 +63,13 @@ interface TooltipPayloadItem {
   payload?: Record<string, unknown>;
 }
 
-const CustomBarTooltip = ({ active, payload, label }: any) => {
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: TooltipPayloadItem[];
+  label?: string | number;
+}
+
+const CustomBarTooltip = ({ active, payload, label }: CustomTooltipProps) => {
   if (active && payload && payload.length) {
     return (
       <div className="glass-panel" style={{
@@ -95,7 +101,12 @@ interface PiePayloadItem {
   payload: { fill?: string; percentage?: number };
 }
 
-const CustomPieTooltip = ({ active, payload }: any) => {
+interface CustomPieTooltipProps {
+  active?: boolean;
+  payload?: PiePayloadItem[];
+}
+
+const CustomPieTooltip = ({ active, payload }: CustomPieTooltipProps) => {
   if (active && payload && payload.length) {
     const entry = payload[0] as PiePayloadItem;
     return (
@@ -150,7 +161,16 @@ const StatCard = ({ icon: Icon, label, value, sub, color }: { icon: LucideIcon; 
 /* ─── CUSTOM DONUT LABEL ─── */
 const RADIAN = Math.PI / 180;
 
-const CustomPieLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
+interface CustomPieLabelProps {
+  cx?: number;
+  cy?: number;
+  midAngle?: number;
+  innerRadius?: number;
+  outerRadius?: number;
+  percent?: number;
+}
+
+const CustomPieLabel = ({ cx = 0, cy = 0, midAngle = 0, innerRadius = 0, outerRadius = 0, percent = 0 }: CustomPieLabelProps) => {
   if (percent < 0.05) return null;
   const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
   const x = cx + radius * Math.cos(-midAngle * RADIAN);

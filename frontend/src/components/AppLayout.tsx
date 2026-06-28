@@ -32,11 +32,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     if (!user || !newName.trim()) return;
     setIsSaving(true);
     try {
-      console.log("Mencoba update profil paralel untuk ID:", user.id);
+      console.log("Mencoba update profil untuk ID:", user.id);
       
-      const updateTasks = [];
-      
-      // Task 1: Update profiles table (Gunakan update karena RLS memblokir Insert/Upsert)
+      // Update profiles table (Gunakan update karena RLS memblokir Insert/Upsert)
       const profileResult = await supabase.from('profiles').update({ 
         name: newName, 
         phone: newPhone
@@ -106,7 +104,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const isActive = (path: string) => location.pathname === path;
 
-  const NavButton = ({ path, icon: Icon, label, badge }: { path: string, icon: any, label: string, badge?: number }) => (
+  const NavButton = ({ path, icon: Icon, label, badge }: { path: string, icon: React.ComponentType<{ size?: number }>, label: string, badge?: number }) => (
     <button 
       className={`btn-outline ${isActive(path) ? "active" : ""}`} 
       style={{ 
