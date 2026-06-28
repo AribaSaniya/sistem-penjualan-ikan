@@ -1,6 +1,6 @@
 # Fish-Link (ArusLaut) — Sistem Penjualan Ikan Online
 
-**Fish-Link** adalah platform marketplace digital untuk Tempat Pelelangan Ikan (TPI) yang menghubungkan nelayan, pengelola TPI, dan pembeli. Aplikasi ini memungkinkan pencarian ikan, pembelian, manajemen pesanan, analitik penjualan, dan reputasi pedagang secara _real-time_.
+**Fish-Link** adalah platform marketplace digital untuk Tempat Penjualan Ikan (TPI) yang menghubungkan Distributor Utama dengan Distributor lanjutan dan para pedagang. Aplikasi ini mengotomatisasi proses  pemantauan stok, pembelian, manajemen pesanan, analitik penjualan, dan reputasi pedagang secara _real-time_.
 
 ---
 
