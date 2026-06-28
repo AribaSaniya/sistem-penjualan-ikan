@@ -10,7 +10,7 @@ interface OrderItem {
   quantity_kg: number;
   price_at_buy: number;
   fish_id: number;
-  fish: any; // Flexible for array or object from Supabase
+  fish: { name: string; image_url: string } | { name: string; image_url: string }[] | null | undefined;
 }
 
 interface Order {
@@ -19,6 +19,28 @@ interface Order {
   status: string;
   created_at: string;
   order_items: OrderItem[];
+}
+
+async function atomicRestock(fishId: number, qty: number) {
+  const maxRetries = 5;
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    const { data: fish } = await supabase
+      .from('fish')
+      .select('stock_kg')
+      .eq('id', fishId)
+      .single();
+    if (!fish) return;
+
+    const { data: updated } = await supabase
+      .from('fish')
+      .update({ stock_kg: fish.stock_kg + qty })
+      .eq('id', fishId)
+      .eq('stock_kg', fish.stock_kg)
+      .select();
+
+    if (updated && updated.length > 0) return;
+  }
+  console.warn(`Gagal restock fish ${fishId} setelah ${maxRetries} percobaan`);
 }
 
 export default function UserDashboard() {
@@ -40,7 +62,7 @@ export default function UserDashboard() {
     merchant_id: null as number | null,
     imageFile: null as File | null
   });
-  const [merchants, setMerchants] = useState<any[]>([]);
+  const [merchants, setMerchants] = useState<{ id: number; name: string }[]>([]);
   const [isSubmittingRating, setIsSubmittingRating] = useState(false);
 
   useEffect(() => {
@@ -87,6 +109,7 @@ export default function UserDashboard() {
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
 
@@ -98,10 +121,7 @@ export default function UserDashboard() {
     try {
       for (const item of order.order_items) {
         if (item.fish_id) {
-          const { data: fish } = await supabase.from('fish').select('stock_kg').eq('id', item.fish_id).single();
-          if (fish) {
-            await supabase.from('fish').update({ stock_kg: fish.stock_kg + item.quantity_kg }).eq('id', item.fish_id);
-          }
+          await atomicRestock(item.fish_id, item.quantity_kg);
         }
       }
       await supabase.from('order_items').delete().eq('order_id', orderId);
@@ -109,8 +129,9 @@ export default function UserDashboard() {
       alert('✅ Pesanan Anda telah dihapus permanen.');
       fetchHistory();
       if (decrementCount) decrementCount();
-    } catch (err: any) {
-      alert('Gagal: ' + err.message);
+    } catch (err: unknown) {
+      const error = err as Error;
+      alert('Gagal: ' + error.message);
     } finally {
       setLoading(false);
     }
@@ -120,7 +141,7 @@ export default function UserDashboard() {
     e.preventDefault();
     if (!user) return;
     if (!ratingData.merchant_id) {
-      alert('⚠️ Mohon pilih pedagang terlebih dahulu.');
+      alert('⚠️ Mohon pilih nama pengirim terlebih dahulu.');
       return;
     }
     
@@ -163,9 +184,10 @@ export default function UserDashboard() {
       alert('✅ Ulasan Anda berhasil terkirim!');
       setIsRatingModalOpen(false);
       setRatingData({ order_id: 0, fish_name: '', rating: 5, comment: '', merchant_id: null, imageFile: null });
-    } catch (err: any) {
-      console.error(err);
-      alert('❌ Terjadi kesalahan: ' + err.message);
+    } catch (err: unknown) {
+      const error = err as Error;
+      console.error(error);
+      alert('❌ Terjadi kesalahan: ' + error.message);
     } finally {
       setIsSubmittingRating(false);
     }
@@ -187,8 +209,7 @@ export default function UserDashboard() {
       for (const order of ordersToCancel) {
         for (const item of order.order_items) {
           if (item.fish_id) {
-            const { data: fish } = await supabase.from('fish').select('stock_kg').eq('id', item.fish_id).single();
-            if (fish) await supabase.from('fish').update({ stock_kg: fish.stock_kg + item.quantity_kg }).eq('id', item.fish_id);
+            await atomicRestock(item.fish_id, item.quantity_kg);
           }
         }
       }
@@ -198,8 +219,9 @@ export default function UserDashboard() {
       setIsSelectionMode(false);
       setSelectedIds([]);
       fetchHistory();
-    } catch (err: any) {
-      alert('Gagal: ' + err.message);
+    } catch (err: unknown) {
+      const error = err as Error;
+      alert('Gagal: ' + error.message);
     } finally {
       setLoading(false);
     }
@@ -303,7 +325,7 @@ export default function UserDashboard() {
                   fontWeight: 600
                 }}
               >
-                <option value="" style={{ background: '#0f172a' }}>Pilih Pedagang...</option>
+                <option value="" style={{ background: '#0f172a' }}>Pilih Nama Pengirim...</option>
                 {merchants.map(m => <option key={m.id} value={m.id} style={{ background: '#0f172a' }}>{m.name}</option>)}
               </select>
               <textarea 

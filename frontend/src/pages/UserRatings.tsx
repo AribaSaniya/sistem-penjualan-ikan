@@ -52,6 +52,7 @@ export default function UserRatings() {
 
   useEffect(() => {
     fetchReviews();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   const filteredReviews = activeFilter === 'Semua' 
@@ -62,7 +63,7 @@ export default function UserRatings() {
     <div style={{ padding: '24px', minHeight: '100vh', color: '#F8FAFC' }}>
       <header style={{ marginBottom: '32px' }}>
         <h1 style={{ background: 'var(--gold-gradient)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontSize: '2rem', fontWeight: 800 }}>Rating & Ulasan Saya</h1>
-        <p style={{ color: '#64748B' }}>Berikan masukan untuk kualitas ikan dan layanan pedagang.</p>
+        <p style={{ color: '#64748B' }}>Berikan masukan untuk kualitas ikan dan layanan pengirim.</p>
       </header>
 
       {/* Summary Section matching user image */}
@@ -145,7 +146,7 @@ export default function UserRatings() {
                   </div>
                   <div>
                     <h4 style={{ margin: 0, fontSize: '1.1rem' }}>{review.fish_name}</h4>
-                    <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748B' }}>Pedagang: <span style={{ color: '#FBBF24' }}>{review.merchant?.name || 'Umum'}</span></p>
+                    <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748B' }}>Pengirim: <span style={{ color: '#FBBF24' }}>{review.merchant?.name || 'Umum'}</span></p>
                   </div>
                 </div>
                 <div style={{ textAlign: 'right' }}>

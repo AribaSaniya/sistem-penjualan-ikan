@@ -8,6 +8,7 @@ interface RekapItem {
   id: number;
   quantity_kg: number;
   price_at_buy: number;
+  fish_id?: number;
   fish: { name: string } | null;
   orders: {
     id: number;
@@ -17,6 +18,8 @@ interface RekapItem {
     total_amount: number;
   };
 }
+
+
 
 export default function AdminOrders() {
   const navigate = useNavigate();
@@ -49,10 +52,11 @@ export default function AdminOrders() {
           
         if (fbError) throw fbError;
         
-        const flattened: any[] = [];
-        fallbackData?.forEach(o => {
+        const flattened: RekapItem[] = [];
+        (fallbackData as any[] | null)?.forEach(o => {
           o.order_items?.forEach((it: any) => {
-            flattened.push({ ...it, orders: { ...o } });
+            const fishData = Array.isArray(it.fish) ? it.fish[0] : it.fish;
+            flattened.push({ ...it, fish: fishData, orders: { ...o } } as RekapItem);
           });
         });
         setItems(flattened);
@@ -67,15 +71,16 @@ export default function AdminOrders() {
         return;
       }
       
-      const flattened: any[] = [];
+      const flattened: RekapItem[] = [];
       const pMap: Record<string, string> = {};
-      ordersData?.forEach(o => {
+      (ordersData as any[] | null)?.forEach(o => {
         const profileData = Array.isArray(o.profiles) ? o.profiles[0] : o.profiles;
         if (o.user_id && profileData?.name) {
           pMap[o.user_id] = profileData.name;
         }
         o.order_items?.forEach((it: any) => {
-          flattened.push({ ...it, orders: { ...o } });
+          const fishData = Array.isArray(it.fish) ? it.fish[0] : it.fish;
+          flattened.push({ ...it, fish: fishData, orders: { ...o } } as RekapItem);
         });
       });
       setItems(flattened);
@@ -100,8 +105,23 @@ export default function AdminOrders() {
   }, []);
 
   const { dailyRekap, fishChartData, ordersList, totals } = useMemo(() => {
-    const dayMap: Record<string, any> = {};
-    const custMap: Record<string, any> = {};
+    interface DayEntry {
+      date: string;
+      kg: number;
+      rp: number;
+      count: number;
+      orderIds: Set<number>;
+    }
+    interface CustEntry {
+      name: string;
+      kg: number;
+      rp: number;
+      count: number;
+      orders: { id: number; total_amount: number }[];
+    }
+
+    const dayMap: Record<string, DayEntry> = {};
+    const custMap: Record<string, CustEntry> = {};
     const fishDayMap: Record<string, Record<string, number>> = {};
     
     items.forEach(it => {
@@ -127,7 +147,7 @@ export default function AdminOrders() {
       // Customer stats
       if (!custMap[name]) custMap[name] = { name, kg: 0, rp: 0, count: 0, orders: [] };
       custMap[name].kg += Number(it.quantity_kg);
-      if (!custMap[name].orders.find((o:any) => o.id === it.orders.id)) {
+      if (!custMap[name].orders.find(o => o.id === it.orders.id)) {
         custMap[name].rp += Number(it.orders.total_amount);
         custMap[name].count += 1;
         custMap[name].orders.push(it.orders);
@@ -258,7 +278,7 @@ export default function AdminOrders() {
                   </tr>
                 </thead>
                 <tbody>
-                  {ordersList.map((o: any) => (
+                  {ordersList.map(o => (
                     <tr key={o.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.02)' }}>
                       <td style={{ padding: '16px', fontSize: '0.85rem', color: '#94A3B8' }}>{o.date}</td>
                       <td style={{ padding: '16px', fontWeight: 700 }}>{o.name}</td>
@@ -280,7 +300,7 @@ export default function AdminOrders() {
             <Calendar size={20} color="#10B981" /> Histori Harian
           </h3>
           <div className="glass-panel" style={{ padding: '0' }}>
-            {dailyRekap.map((day: any) => (
+            {dailyRekap.map(day => (
               <div key={day.date} style={{ padding: '16px', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                   <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>{day.date}</div>

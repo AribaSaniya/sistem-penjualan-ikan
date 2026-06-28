@@ -77,7 +77,7 @@ export default function AdminDashboard() {
       let finalImageUrl = 'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?q=80&w=400';
       if (imageFile) {
         try { finalImageUrl = await uploadImage(imageFile); }
-        catch (imgErr: any) { throw new Error(`Gagal upload gambar: ${imgErr.message}`); }
+        catch (imgErr) { throw new Error(`Gagal upload gambar: ${(imgErr as Error).message}`); }
       }
       const priceNumeric = parseInt(formattedPrice.replace(/\./g, ''), 10);
       const { error } = await supabase.from('fish').insert({
@@ -90,8 +90,8 @@ export default function AdminDashboard() {
       if (fi) fi.value = '';
       alert(`✅ Ikan "${name}" berhasil ditayangkan!`);
       fetchData();
-    } catch (error: any) {
-      alert(`❌ Gagal: ${error.message}`);
+    } catch (error) {
+      alert(`❌ Gagal: ${(error as Error).message}`);
     } finally { setIsUploading(false); }
   };
 
@@ -100,7 +100,7 @@ export default function AdminDashboard() {
       const { error } = await supabase.from('fish').update({ price_per_kg: newPrice }).eq('id', id);
       if (error) throw error;
       fetchData();
-    } catch (error) { console.error(error); }
+    } catch (err) { console.error(err); }
   };
 
   const handleDelete = async (id: number, fishName: string) => {
@@ -109,7 +109,7 @@ export default function AdminDashboard() {
       const { error } = await supabase.from('fish').delete().eq('id', id);
       if (error) throw error;
       fetchData();
-    } catch (error: any) { alert(error.message || 'Gagal menghapus.'); }
+    } catch (err) { alert((err as Error).message || 'Gagal menghapus.'); }
   };
 
 

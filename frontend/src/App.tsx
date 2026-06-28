@@ -40,7 +40,17 @@ function App() {
 
   useEffect(() => {
     initialize();
-  }, []);
+    
+    // Check if coming from password recovery email link
+    if (window.location.hash && window.location.hash.includes('type=recovery')) {
+      // Allow auth state to settle, then redirect to auth page
+      setTimeout(() => {
+        if (window.location.pathname !== '/auth') {
+          window.location.href = '/auth' + window.location.hash;
+        }
+      }, 500);
+    }
+  }, [initialize]);
   return (
     <Router>
       <AppLayout>

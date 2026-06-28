@@ -16,6 +16,7 @@ export default function PortalAuth() {
   const [name, setName] = useState('');
   const [otp, setOtp] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [otpType, setOtpType] = useState<'signup' | 'recovery'>('signup');
   
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -28,6 +29,23 @@ export default function PortalAuth() {
     setError('');
     setMessage('');
   }, [view]);
+
+  // Handle password recovery via magic link
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setView('update_password');
+      }
+    });
+    
+    // Check hash for recovery just in case
+    const hash = window.location.hash;
+    if (hash && hash.includes('type=recovery')) {
+      setView('update_password');
+    }
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,21 +68,37 @@ export default function PortalAuth() {
           { 
             id: data.user.id, 
             name: data.user.user_metadata?.name || email.split('@')[0], 
-            role: data.user.user_metadata?.role || roleMode 
+            role: data.user.email === 'pengelolatpi@gmail.com' ? 'admin' : (data.user.user_metadata?.role || roleMode)
           }
         ]).select().single();
 
         if (insertError) {
           console.error("Gagal sinkron database:", insertError);
           // Jika gagal karena RLS, kita gunakan data sementara agar tetap bisa masuk
-          profile = { id: data.user.id, name: data.user.user_metadata?.name || 'User', role: data.user.user_metadata?.role || roleMode } as any;
+          profile = { id: data.user.id, name: data.user.user_metadata?.name || 'User', role: data.user.email === 'pengelolatpi@gmail.com' ? 'admin' : (data.user.user_metadata?.role || roleMode) } as { id: string; name: string; role: string; phone?: string | null };
         } else {
           profile = newProfile;
         }
       }
+      
+      // Sinkronisasi paksa role admin untuk email khusus di database agar terdeteksi di halaman bursa
+      if (data.user.email === 'pengelolatpi@gmail.com' && profile && profile.role !== 'admin') {
+        const { data: updatedProfile } = await supabase
+          .from('profiles')
+          .update({ role: 'admin' })
+          .eq('id', data.user.id)
+          .select()
+          .single();
+        if (updatedProfile) profile = updatedProfile;
+      }
 
       // Pastikan Role terdeteksi
-      const finalRole = profile?.role || data.user.user_metadata?.role || roleMode;
+      let finalRole = profile?.role || data.user.user_metadata?.role || roleMode;
+      
+      // Force admin role for specific email
+      if (data.user.email === 'pengelolatpi@gmail.com') {
+        finalRole = 'admin';
+      }
 
       // Update State Global
       useAuthStore.getState().setUser(
@@ -75,8 +109,9 @@ export default function PortalAuth() {
       // REDIRECT KE BURSA IKAN (HOME)
       navigate('/');
 
-    } catch (err: any) {
-      setError(err.message || 'Login gagal. Periksa Email/Password Anda.');
+    } catch (err: unknown) {
+      const error = err as Error;
+      setError(error.message || 'Login gagal. Periksa Email/Password Anda.');
     } finally {
       setLoading(false);
     }
@@ -87,17 +122,30 @@ export default function PortalAuth() {
     setError('');
     setLoading(true);
     try {
-      const { error: signUpError } = await supabase.auth.signUp({
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
-        options: { data: { name, role: roleMode } }
+        options: { 
+          data: { 
+            name, 
+            role: roleMode 
+          } 
+        }
       });
+      console.log(`Mendaftar sebagai ${roleMode}:`, email, signUpData);
       if (signUpError) throw signUpError;
       
-      setMessage('Kode verifikasi telah dikirim ke email Anda.');
+      if (!signUpData?.user) {
+        throw new Error('Gagal membuat akun. Mungkin email sudah terdaftar.');
+      }
+      
+      setMessage('Kode verifikasi telah dikirim ke email Anda. Periksa juga folder Spam.');
+      setOtpType('signup');
       setView('verify_otp');
-    } catch (err: any) {
-      setError(err.message || 'Registrasi gagal.');
+    } catch (err: unknown) {
+      const error = err as Error;
+      console.error('Register Error:', error);
+      setError(error.message || 'Registrasi gagal.');
     } finally {
       setLoading(false);
     }
@@ -111,9 +159,11 @@ export default function PortalAuth() {
       const { error } = await supabase.auth.resetPasswordForEmail(email);
       if (error) throw error;
       setMessage('Kode pemulihan telah dikirim ke email Anda.');
+      setOtpType('recovery');
       setView('verify_otp');
-    } catch (err: any) {
-      setError(err.message || 'Gagal mengirim email pemulihan.');
+    } catch (err: unknown) {
+      const error = err as Error;
+      setError(error.message || 'Gagal mengirim email pemulihan.');
     } finally {
       setLoading(false);
     }
@@ -123,7 +173,7 @@ export default function PortalAuth() {
     setError('');
     setLoading(true);
     try {
-      const type = message.includes('pemulihan') ? 'recovery' : 'signup';
+      const type = otpType;
       const { data, error } = await supabase.auth.verifyOtp({
         email,
         token: otpCode,
@@ -139,7 +189,12 @@ export default function PortalAuth() {
         if (!user) throw new Error("Gagal mendapatkan data user setelah verifikasi.");
 
         // Ambil role dari metadata pendaftaran
-        const role = user.user_metadata?.role || 'user';
+        let role = user.user_metadata?.role || 'user';
+        
+        // Force admin role for specific email
+        if (user.email === 'pengelolatpi@gmail.com') {
+          role = 'admin';
+        }
         
         // Sync profil database (pastikan role tersimpan dengan benar)
         let { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
@@ -162,8 +217,38 @@ export default function PortalAuth() {
         // Arahkan ke bursa ikan
         navigate('/');
       }
-    } catch {
-      setError('Kode OTP salah atau sudah kadaluarsa.');
+    } catch (err: unknown) {
+      const error = err as Error;
+      console.error('OTP Error:', error);
+      setError(error.message || 'Kode OTP salah atau sudah kadaluarsa.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    setError('');
+    setMessage('');
+    setLoading(true);
+    try {
+      if (otpType === 'recovery') {
+        const { error } = await supabase.auth.resetPasswordForEmail(email);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: { name, role: roleMode }
+          }
+        });
+        if (error) throw error;
+      }
+      setMessage('Kode OTP baru telah dikirim ke email Anda. Periksa juga folder Spam.');
+    } catch (err: unknown) {
+      const error = err as Error;
+      console.error('Resend OTP Error:', error);
+      setError(error.message || 'Gagal mengirim ulang kode.');
     } finally {
       setLoading(false);
     }
@@ -179,19 +264,33 @@ export default function PortalAuth() {
     setError('');
     setLoading(true);
     try {
+      // Menjalankan verifikasi pembaruan password ke Supabase
       const { error } = await supabase.auth.updateUser({ password: newPassword });
+      
       if (error) throw error;
-      alert('Password berhasil diperbarui! Silakan login kembali.');
+      
+      // Hapus sesi pemulihan sementara agar pengguna harus login kembali
+      // dengan password baru mereka
+      await supabase.auth.signOut();
+      useAuthStore.getState().setUser(null, null);
+
+      alert('Password berhasil diperbarui! Silakan login kembali dengan password baru Anda.');
+      
+      // Kosongkan form dan kembali ke halaman login
+      setNewPassword('');
       setView('login');
-    } catch (err: any) {
-      setError(err.message || 'Gagal memperbarui password.');
+      
+    } catch (err: unknown) {
+      const error = err as Error;
+      console.error('Update Password Error:', error);
+      setError(error.message || 'Gagal memperbarui password. Sesi mungkin sudah berakhir, silakan ulangi permintaan.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', padding: '20px' }}>
+    <div style={{ width: '100%', maxWidth: '420px', margin: '40px auto', padding: '0 20px' }}>
       <div className="glass-panel animate-fade-in" style={{ width: '100%', maxWidth: '400px', padding: '32px' }}>
         
         {/* Portal Selection (Only for Login/Register) */}
@@ -249,7 +348,7 @@ export default function PortalAuth() {
         <div style={{ textAlign: 'center', marginBottom: '24px' }}>
           <h2 style={{ fontSize: '1.8rem', fontWeight: 'bold', marginBottom: '8px' }}>
             {view === 'login' && (roleMode === 'admin' ? 'Login Pengelola' : 'Masuk Fish-Link')}
-            {view === 'register' && (roleMode === 'admin' ? 'Daftar Admin' : 'Daftar Baru')}
+            {view === 'register' && (roleMode === 'admin' ? 'Daftar Pengelola' : 'Daftar Pembeli')}
             {view === 'forgot_password' && 'Reset Password'}
             {view === 'verify_otp' && 'Verifikasi Kode'}
             {view === 'update_password' && 'Password Baru'}
@@ -258,7 +357,7 @@ export default function PortalAuth() {
             {view === 'login' && (roleMode === 'admin' ? 'Masuk ke sistem manajemen ArusLaut' : 'Portal Pembeli Ikan Segar')}
             {view === 'register' && (roleMode === 'admin' ? 'Buat akun pengelola TPI baru' : 'Buat akun Anda untuk mulai bertransaksi')}
             {view === 'forgot_password' && 'Masukkan email untuk dikirimkan kode OTP'}
-            {view === 'verify_otp' && 'Masukkan 8 digit kode yang dikirim ke email'}
+            {view === 'verify_otp' && 'Masukkan 6 digit kode yang dikirim ke email'}
             {view === 'update_password' && 'Buat kombinasi password baru yang kuat'}
           </p>
         </div>
@@ -343,7 +442,7 @@ export default function PortalAuth() {
               </p>
               
               <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '24px', flexWrap: 'wrap' }}>
-                {[0, 1, 2, 3, 4, 5, 6, 7].map((index) => (
+                {[0, 1, 2, 3, 4, 5].map((index) => (
                   <input
                     key={index}
                     id={`otp-${index}`}
@@ -355,17 +454,17 @@ export default function PortalAuth() {
                       if (val) {
                         const newOtp = otp.split('');
                         newOtp[index] = val;
-                        const finalOtp = newOtp.join('').slice(0, 8);
+                        const finalOtp = newOtp.join('').slice(0, 6);
                         setOtp(finalOtp);
                         
                         // Auto focus next
-                        if (index < 7) {
+                        if (index < 5) {
                           const nextInput = document.getElementById(`otp-${index + 1}`);
                           nextInput?.focus();
                         }
                         
                         // Auto submit if complete
-                        if (finalOtp.length === 8 && !finalOtp.includes(' ')) {
+                        if (finalOtp.length === 6 && !finalOtp.includes(' ')) {
                           verifyOTP(finalOtp);
                         }
                       }
@@ -398,8 +497,14 @@ export default function PortalAuth() {
               </div>
             </div>
             
+            <p style={{ textAlign: 'center', fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>
+              Tidak menerima email? Periksa folder <strong>Spam</strong> atau kirim ulang.
+            </p>
             <button type="submit" className="btn-accent" disabled={loading} style={{ padding: '14px' }}>
               {loading ? 'Memverifikasi...' : 'Verifikasi Sekarang'}
+            </button>
+            <button type="button" onClick={handleResendOtp} className="btn-outline" disabled={loading} style={{ background: 'none', borderColor: 'var(--accent-color)', color: 'var(--accent-color)' }}>
+              {loading ? 'Mengirim...' : 'Kirim Ulang Kode'}
             </button>
             <button type="button" onClick={() => setView('login')} className="btn-outline" style={{ background: 'none' }}>
               Ganti Email

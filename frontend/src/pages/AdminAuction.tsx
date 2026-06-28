@@ -15,7 +15,7 @@ import {
   Line,
 } from 'recharts';
 import { supabase } from '../services/supabaseClient';
-import { TrendingUp, Fish, Calendar, Award } from 'lucide-react';
+import { TrendingUp, Fish, Calendar, Award, type LucideIcon } from 'lucide-react';
 
 /* ─── Soft & Bright Color Palette (matches ocean theme) ─── */
 const CHART_COLORS = [
@@ -34,8 +34,8 @@ const CHART_COLORS = [
 interface OrderItem {
   quantity_kg: number;
   fish_id: number;
-  fish: { name: string };
-  orders: { created_at: string; status: string };
+  fish: { name: string } | { name: string }[] | null;
+  orders: { created_at: string; status: string } | { created_at: string; status: string }[] | null;
 }
 
 interface DayStats {
@@ -55,6 +55,14 @@ interface FishTotal {
 }
 
 /* ─── Custom Tooltip ─── */
+interface TooltipPayloadItem {
+  name?: string;
+  value?: number | string;
+  color?: string;
+  unit?: string;
+  payload?: Record<string, unknown>;
+}
+
 const CustomBarTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
@@ -66,7 +74,7 @@ const CustomBarTooltip = ({ active, payload, label }: any) => {
         minWidth: '180px'
       }}>
         <p style={{ fontWeight: 800, fontSize: '1rem', color: '#38BDF8', marginBottom: '10px' }}>{label}</p>
-        {payload.map((p: any, i: number) => (
+        {payload.map((p: TooltipPayloadItem, i: number) => (
           <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: '24px', marginBottom: '4px' }}>
             <span style={{ color: '#94A3B8', fontSize: '0.85rem' }}>{p.name}:</span>
             <strong style={{ color: p.color, fontSize: '0.9rem' }}>
@@ -81,9 +89,15 @@ const CustomBarTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
+interface PiePayloadItem {
+  name?: string;
+  value?: number;
+  payload: { fill?: string; percentage?: number };
+}
+
 const CustomPieTooltip = ({ active, payload }: any) => {
   if (active && payload && payload.length) {
-    const entry = payload[0];
+    const entry = payload[0] as PiePayloadItem;
     return (
       <div className="glass-panel" style={{
         padding: '14px 18px',
@@ -105,7 +119,7 @@ const CustomPieTooltip = ({ active, payload }: any) => {
 };
 
 /* ─── Stat Card ─── */
-const StatCard = ({ icon: Icon, label, value, sub, color }: { icon: any; label: string; value: string; sub?: string; color: string }) => (
+const StatCard = ({ icon: Icon, label, value, sub, color }: { icon: LucideIcon; label: string; value: string; sub?: string; color: string }) => (
   <div className="glass-panel" style={{
     padding: '20px 24px',
     display: 'flex',
@@ -135,6 +149,7 @@ const StatCard = ({ icon: Icon, label, value, sub, color }: { icon: any; label: 
 
 /* ─── CUSTOM DONUT LABEL ─── */
 const RADIAN = Math.PI / 180;
+
 const CustomPieLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
   if (percent < 0.05) return null;
   const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
@@ -169,7 +184,7 @@ export default function AdminAuction() {
           .neq('orders.status', 'cancelled');
 
         if (error) throw error;
-        setOrderItems((data as any[]) || []);
+        setOrderItems((data as OrderItem[]) || []);
       } catch (err) {
         console.error('Gagal ambil data penjualan:', err);
       } finally {
@@ -190,7 +205,10 @@ export default function AdminAuction() {
     const fishGlobal: Record<string, number> = {};
 
     orderItems.forEach((item) => {
-      const dateISO = new Date((item.orders as any).created_at).toLocaleDateString('id-ID', {
+      const orderData = Array.isArray(item.orders) ? item.orders[0] : item.orders;
+      if (!orderData) return;
+
+      const dateISO = new Date(orderData.created_at).toLocaleDateString('id-ID', {
         year: 'numeric', month: '2-digit', day: '2-digit'
       }).split('/').reverse().join('-');
 
@@ -198,7 +216,8 @@ export default function AdminAuction() {
       byDay[dateISO].kg += Number(item.quantity_kg);
       byDay[dateISO].count += 1;
 
-      const fishName = (item.fish as any)?.name || 'Unknown';
+      const fishData = Array.isArray(item.fish) ? item.fish[0] : item.fish;
+      const fishName = fishData?.name || 'Unknown';
       byDay[dateISO].fishMap[fishName] = (byDay[dateISO].fishMap[fishName] || 0) + Number(item.quantity_kg);
       fishGlobal[fishName] = (fishGlobal[fishName] || 0) + Number(item.quantity_kg);
     });

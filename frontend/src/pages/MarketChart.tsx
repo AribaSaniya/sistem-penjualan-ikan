@@ -7,16 +7,15 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Legend
+  Legend,
 } from 'recharts';
 import { supabase } from '../services/supabaseClient';
 
 interface MarketData {
   name: string;
-  price: number; // Harga Anda (TPI)
-  marketPrice: number; // Harga Pasar Umum
+  price: number;
+  marketPrice: number;
   totalSoldKg: number;
-
 }
 
 export default function MarketChart() {
@@ -64,7 +63,7 @@ export default function MarketChart() {
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
-      const data = payload[0].payload;
+      const data = payload[0].payload as MarketData;
       return (
         <div className="glass-panel" style={{ padding: '20px', background: 'rgba(10, 22, 40, 0.98)', border: '1px solid var(--accent-color)', borderRadius: '16px' }}>
           <p style={{ fontWeight: '800', fontSize: '1.1rem', marginBottom: '12px', color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '8px' }}>{label}</p>

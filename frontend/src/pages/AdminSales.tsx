@@ -136,8 +136,8 @@ export default function AdminSales() {
       setIsModalOpen(false);
       setFormData({ id: null, name: '', category: '', rating: '5.0', imageFile: null });
       fetchMerchants();
-    } catch (err: any) {
-      alert('Gagal: ' + err.message);
+    } catch (err) {
+      alert('Gagal: ' + (err as Error).message);
     } finally {
       setIsSaving(false);
     }

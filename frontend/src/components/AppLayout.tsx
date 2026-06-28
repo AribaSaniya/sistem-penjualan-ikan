@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../store/useAuthStore';
-import { LayoutDashboard, ShoppingCart, TrendingUp, LogOut, BarChart2, ClipboardList, Star, ChevronRight, User as UserIcon, X, Phone, Mail } from 'lucide-react';
+import { LayoutDashboard, ShoppingCart, TrendingUp, LogOut, BarChart2, ClipboardList, Star, ChevronRight, User as UserIcon, X, Phone, Mail, Lock } from 'lucide-react';
 import { useOrderStore } from '../store/useOrderStore';
 import { supabase } from '../services/supabaseClient';
 import { useEffect } from 'react';
@@ -16,37 +16,46 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [newName, setNewName] = useState(user?.name || '');
   const [newPhone, setNewPhone] = useState(user?.phone || '');
   const [isSaving, setIsSaving] = useState(false);
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
 
   useEffect(() => {
+    if (!user) return;
     if (user?.id) fetchCount(user.id);
     if (user?.name) setNewName(user.name);
     if (user?.phone) setNewPhone(user.phone);
-  }, [user]);
+  }, [user, fetchCount]);
 
   const handleUpdateProfile = async () => {
     if (!user || !newName.trim()) return;
     setIsSaving(true);
     try {
-      // First try to update both name and phone in profiles table
-      let profileError = null;
-      try {
-        const { error } = await supabase.from('profiles').update({ name: newName, phone: newPhone }).eq('id', user.id);
-        profileError = error;
-      } catch (e: any) {
-        profileError = e;
+      console.log("Mencoba update profil paralel untuk ID:", user.id);
+      
+      const updateTasks = [];
+      
+      // Task 1: Update profiles table (Gunakan update karena RLS memblokir Insert/Upsert)
+      const profileResult = await supabase.from('profiles').update({ 
+        name: newName, 
+        phone: newPhone
+      }).eq('id', user.id);
+
+      // Check for errors in profile update
+      if (profileResult.error) {
+        console.warn("Update profil dengan phone gagal, mencoba fallback nama saja...", profileResult.error);
+        const { error: fallbackErr } = await supabase.from('profiles').update({ name: newName }).eq('id', user.id);
+        if (fallbackErr) throw fallbackErr;
       }
 
-      // If updating phone fails (e.g. column doesn't exist), fallback to updating only name
-      if (profileError) {
-        const { error } = await supabase.from('profiles').update({ name: newName }).eq('id', user.id);
-        if (error) throw error;
-      }
-      // Only update auth user metadata if phone has changed
+      // Task 2: Update auth metadata (hanya jika HP berubah) - Dilakukan setelah task 1 selesai (menghindari Lock stolen)
       if (newPhone !== (user.phone || '')) {
-        const { error: authErr } = await supabase.auth.updateUser({
-          data: { phone: newPhone }
-        });
-        if (authErr) throw authErr;
+        const { error: authError } = await supabase.auth.updateUser({ data: { phone: newPhone } });
+        if (authError) {
+          console.error("Gagal mengupdate Auth Metadata:", authError);
+          // Kita tidak perlu melemparkan error jika ini gagal, profil database sudah terupdate.
+        }
       }
       
       // Update local store immediately
@@ -54,13 +63,38 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       
       alert('Profil berhasil diperbarui!');
       setShowProfileModal(false);
-      
-      setTimeout(() => window.location.reload(), 500);
-    } catch (err: any) {
-      console.error("Update Error:", err);
-      alert('Gagal menyimpan profil: ' + (err.message || 'Izin ditolak'));
+    } catch (err: unknown) {
+      const error = err as Error;
+      console.error("Update Error:", error);
+      alert('Gagal menyimpan profil: ' + (error.message || 'Izin ditolak'));
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    if (!newPassword || newPassword.length < 6) {
+      alert('Password minimal 6 karakter.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      alert('Konfirmasi password tidak cocok.');
+      return;
+    }
+    setIsChangingPassword(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
+      alert('Password berhasil diperbarui!');
+      setNewPassword('');
+      setConfirmPassword('');
+      setShowPasswordForm(false);
+    } catch (err: unknown) {
+      const error = err as Error;
+      console.error('Change Password Error:', error);
+      alert('Gagal mengganti password: ' + (error.message || 'Terjadi kesalahan'));
+    } finally {
+      setIsChangingPassword(false);
     }
   };
 
@@ -109,7 +143,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   if (isAuthPage) {
     return (
       <div className="app-container" style={{ display: 'block' }}>
-        <main className="main-content" style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <main className="main-content" style={{ minHeight: '100vh', display: 'flex', justifyContent: 'center' }}>
           {children}
         </main>
       </div>
@@ -304,10 +338,89 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               {user?.role === 'admin' && (
                 <div>
                   <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: '600' }}><Phone size={14} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }}/> Nomor WhatsApp</label>
-                  <input type="text" placeholder="Contoh: 08123456789" value={newPhone} onChange={e => setNewPhone(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--accent-color)', color: 'white' }} />
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <input 
+                      type="text" 
+                      placeholder="Contoh: 08123456789" 
+                      value={newPhone} 
+                      onChange={e => setNewPhone(e.target.value)} 
+                      readOnly={!!user?.phone && newPhone === user.phone}
+                      style={{ 
+                        flex: 1, 
+                        padding: '12px', 
+                        borderRadius: '8px', 
+                        background: (!!user?.phone && newPhone === user.phone) ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.05)', 
+                        border: '1px solid var(--accent-color)', 
+                        color: (!!user?.phone && newPhone === user.phone) ? 'var(--text-muted)' : 'white',
+                        cursor: (!!user?.phone && newPhone === user.phone) ? 'not-allowed' : 'text'
+                      }} 
+                    />
+                    {newPhone && (
+                      <button 
+                        onClick={() => setNewPhone('')}
+                        style={{ 
+                          padding: '0 12px', 
+                          borderRadius: '8px', 
+                          background: 'rgba(244, 63, 94, 0.1)', 
+                          border: '1px solid #F43F5E', 
+                          color: '#F43F5E', 
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          transition: 'all 0.2s'
+                        }}
+                        title="Hapus / Log Out Nomor WA untuk mengganti"
+                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(244, 63, 94, 0.2)'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'rgba(244, 63, 94, 0.1)'}
+                      >
+                        <LogOut size={16} />
+                      </button>
+                    )}
+                  </div>
+                  {!!user?.phone && newPhone === user.phone && (
+                    <p style={{ fontSize: '0.65rem', color: '#F43F5E', marginTop: '4px' }}>* Klik tombol merah untuk mengganti nomor</p>
+                  )}
                 </div>
               )}
               
+              <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
+                <button 
+                  type="button"
+                  onClick={() => setShowPasswordForm(!showPasswordForm)}
+                  style={{ background: 'none', border: 'none', color: 'var(--primary-color)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 0', fontSize: '0.9rem' }}
+                >
+                  <Lock size={16} /> {showPasswordForm ? 'Sembunyikan' : 'Ganti Password'}
+                </button>
+                
+                {showPasswordForm && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '12px' }}>
+                    <input 
+                      type="password" 
+                      placeholder="Password Baru (min. 6 karakter)" 
+                      value={newPassword} 
+                      onChange={e => setNewPassword(e.target.value)}
+                      style={{ width: '100%', padding: '12px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--accent-color)', color: 'white' }}
+                    />
+                    <input 
+                      type="password" 
+                      placeholder="Konfirmasi Password Baru" 
+                      value={confirmPassword} 
+                      onChange={e => setConfirmPassword(e.target.value)}
+                      style={{ width: '100%', padding: '12px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--accent-color)', color: 'white' }}
+                    />
+                    <button 
+                      className="btn-accent" 
+                      onClick={handleChangePassword} 
+                      disabled={isChangingPassword}
+                      style={{ padding: '12px', width: '100%' }}
+                    >
+                      {isChangingPassword ? 'Menyimpan...' : 'Simpan Password Baru'}
+                    </button>
+                  </div>
+                )}
+              </div>
+
               <button className="btn-primary" onClick={handleUpdateProfile} disabled={isSaving} style={{ padding: '14px', marginTop: '10px' }}>
                 {isSaving ? 'Menyimpan...' : 'Simpan Perubahan'}
               </button>

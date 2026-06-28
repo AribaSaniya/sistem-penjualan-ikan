@@ -19,6 +19,8 @@
   --border-radius: 12px;
   --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
 
+  --panel-bg-solid: #0F172A;
+
   /* Gradients */
   --gold-gradient: linear-gradient(135deg, #FDE68A 0%, #D4AF37 50%, #B8860B 100%);
   --teal-gradient: linear-gradient(135deg, #0EA5E9 0%, #2DD4BF 100%);
@@ -366,4 +368,14 @@ button:disabled {
 
 .animate-spin {
   animation: spin 1s linear infinite;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(56, 189, 248, 0.15);
+  border-top-color: #38BDF8;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto;
 }

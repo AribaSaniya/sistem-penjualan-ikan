@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuthStore } from '../store/useAuthStore';
-import { X, Smile, Leaf } from 'lucide-react';
+import { X } from 'lucide-react';
 import { supabase } from '../services/supabaseClient';
 import { useOrderStore } from '../store/useOrderStore';
 
@@ -27,40 +27,62 @@ export default function Home() {
   const [searchTerm, setSearchTerm] = useState('');
 
   // WA Chat State
-  const [isChatOpen, setIsChatOpen] = useState(false);
-  const [hasReadChat, setHasReadChat] = useState(false);
-  const [chatMessage, setChatMessage] = useState('');
-  const [adminWaNumber, setAdminWaNumber] = useState('6281234567890');
+  const [adminWaNumber, setAdminWaNumber] = useState('');
 
   useEffect(() => {
     const fetchAdminPhone = async () => {
       try {
         const { data, error } = await supabase
           .from('profiles')
-          .select('*')
+          .select('phone')
           .eq('role', 'admin')
+          .not('phone', 'is', null)
+          .neq('phone', '')
           .limit(1);
           
-        if (!error && data && data.length > 0) {
-          // If phone exists in profiles, use it. Otherwise, check if we can get it from somewhere else.
-          if (data[0].phone) {
-            setAdminWaNumber(data[0].phone);
-          }
+        if (error) {
+          console.error('Error fetching admin phone:', error.message);
+        }
+
+        console.log('Raw data from profiles query:', data);
+
+        if (data && data.length > 0) {
+          console.log('Admin phone detected:', data[0].phone);
+          setAdminWaNumber(data[0].phone);
+        } else {
+          console.warn('No admin phone found in database. Search params: role=admin, phone NOT NULL/EMPTY');
         }
       } catch (err) {
-        console.error('Error fetching admin phone:', err);
+        console.error('Unexpected error fetching admin phone:', err);
       }
     };
     fetchAdminPhone();
   }, []);
 
-  const handleSendWa = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!chatMessage.trim()) return;
-    const url = `https://wa.me/${adminWaNumber}?text=${encodeURIComponent(chatMessage)}`;
+  const handleSendWa = (e?: React.SyntheticEvent) => {
+    if (e) e.preventDefault();
+    
+    if (!adminWaNumber) {
+      alert("Maaf, Admin belum mengatur nomor WhatsApp. Silakan hubungi melalui saluran lain atau coba lagi nanti.");
+      return;
+    }
+    
+    // Format nomor agar sesuai standar WhatsApp
+    const cleanNumber = adminWaNumber.replace(/\D/g, '');
+    let formattedNumber = cleanNumber;
+    
+    if (cleanNumber.startsWith('0')) {
+      formattedNumber = '62' + cleanNumber.slice(1);
+    } else if (cleanNumber.startsWith('8')) {
+      formattedNumber = '62' + cleanNumber;
+    }
+    
+    console.log("Original number from DB:", adminWaNumber);
+    console.log("Formatted number for WA:", formattedNumber);
+    
+    const defaultMessage = "Halo Admin Fish-Link, saya ingin bertanya mengenai pesanan/ikan.";
+    const url = `https://wa.me/${formattedNumber}?text=${encodeURIComponent(defaultMessage)}`;
     window.open(url, '_blank');
-    setChatMessage('');
-    setIsChatOpen(false);
   };
 
   
@@ -98,16 +120,23 @@ export default function Home() {
   const handleCheckout = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!buyingFish || !user) return;
-    setIsProcessing(true);
-    
-    try {
-      if (user.id.startsWith('dummy-')) {
-        alert('Fitur Checkout tidak tersedia di Mode Dummy');
-        setBuyingFish(null);
-        setIsProcessing(false);
-        return;
-      }
+    if (qty <= 0) {
+      alert('Jumlah pembelian tidak valid.');
+      setBuyingFish(null);
+      setIsProcessing(false);
+      return;
+    }
 
+    if (user.id.startsWith('dummy-')) {
+      alert('Fitur Checkout tidak tersedia di Mode Dummy');
+      setBuyingFish(null);
+      setIsProcessing(false);
+      return;
+    }
+
+    setIsProcessing(true);
+
+    try {
       const { data, error } = await supabase.rpc('checkout_fish', {
         p_fish_id: buyingFish.id,
         p_qty: qty,
@@ -116,10 +145,6 @@ export default function Home() {
 
       if (error) throw error;
       if (data.status === 'error') throw new Error(data.message);
-      if (qty <= 0) {
-        alert('Jumlah pembelian tidak valid.');
-        return;
-      }
 
       incrementCount(); // Update badge instantly
       setBuyingFish(null);
@@ -128,8 +153,9 @@ export default function Home() {
       // Navigasi ke Dashboard ditiadakan sesuai permintaan hapus bagian pesanan saya
 
 
-    } catch (error: any) {
-      alert(error.message || 'Gagal memproses pesanan.');
+    } catch (error) {
+      const err = error as Error;
+      alert(err.message || 'Gagal memproses pesanan.');
     } finally {
       setIsProcessing(false);
     }
@@ -356,110 +382,37 @@ export default function Home() {
 
       {/* Floating WA Chat Widget */}
       <div style={{ position: 'fixed', bottom: '20px', right: '20px', zIndex: 999 }}>
-        {/* Chat Popup */}
-        {isChatOpen && (
-          <div className="animate-fade-in" style={{ 
-            position: 'absolute', 
-            bottom: '75px', 
-            right: '0', 
-            width: '90vw', 
-            maxWidth: '380px', 
-            background: 'white', 
-            borderRadius: '16px', 
-            overflow: 'hidden',
-            boxShadow: '0 10px 25px rgba(0,0,0,0.15)',
-            border: 'none',
-            display: 'flex',
-            flexDirection: 'column'
-          }}>
-            {/* Header */}
-            <div style={{ background: 'white', padding: '16px', color: '#111827', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f3f4f6' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#fef3c7', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#10b981' }}>
-                  <Leaf size={18} />
-                </div>
-                <div>
-                  <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: '700' }}>Admin Fish-Link</h4>
-                  <p style={{ margin: 0, fontSize: '0.7rem', color: '#6b7280' }}>Typically replies within a minute</p>
-                </div>
-              </div>
-              <button onClick={() => setIsChatOpen(false)} style={{ background: 'transparent', border: 'none', color: '#9ca3af', cursor: 'pointer', padding: '4px' }}>
-                <X size={18} />
-              </button>
-            </div>
-            
-            {/* Body */}
-            <div style={{ padding: '24px', background: '#fdf8f0', minHeight: '200px', position: 'relative' }}>
-              <div style={{ position: 'relative', background: 'white', padding: '14px 18px', borderRadius: '8px', color: '#111827', fontSize: '0.9rem', boxShadow: '0 1px 2px rgba(0,0,0,0.05)', display: 'inline-block', maxWidth: '85%', lineHeight: '1.4' }}>
-                {/* Bubble tail */}
-                <div style={{ position: 'absolute', top: '12px', left: '-6px', width: '0', height: '0', borderTop: '6px solid transparent', borderBottom: '6px solid transparent', borderRight: '6px solid white' }}></div>
-                
-                Halo! Selamat datang di Fish-Link.<br/>Ada yang bisa kami bantu?
-                
-                <div style={{ fontSize: '0.65rem', color: '#9ca3af', textAlign: 'right', marginTop: '8px' }}>
-                  12:10 pm
-                </div>
-              </div>
-            </div>
-            
-            {/* Footer */}
-            <div style={{ padding: '16px', background: 'white', display: 'flex', flexDirection: 'column', gap: '12px', margin: 0 }}>
-              <div style={{ position: 'relative', borderBottom: '1px solid #f3f4f6', paddingBottom: '12px' }}>
-                <input 
-                  type="text" 
-                  placeholder="Type Message" 
-                  value={chatMessage}
-                  onChange={e => setChatMessage(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && handleSendWa(e as any)}
-                  style={{ width: '100%', padding: '4px 30px 4px 8px', border: 'none', outline: 'none', fontSize: '0.9rem', color: '#111827', background: 'white' }}
-                />
-                <Smile size={18} color="#9ca3af" style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)' }} />
-              </div>
-              <button onClick={handleSendWa} style={{ width: '100%', background: '#21c063', color: 'white', border: 'none', padding: '12px', borderRadius: '24px', fontWeight: 'bold', fontSize: '0.9rem', cursor: 'pointer' }}>
-                Send A Message
-              </button>
-              <div style={{ textAlign: 'center', fontSize: '0.65rem', color: '#9ca3af', fontWeight: '600' }}>
-                Powered by Fish-Link
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Floating Button */}
         <button 
-          onClick={() => {
-            setIsChatOpen(!isChatOpen);
-            if (!hasReadChat) setHasReadChat(true);
-          }}
+          onClick={handleSendWa}
           style={{
             position: 'relative',
-            width: '72px',
-            height: '72px',
+            width: '64px',
+            height: '64px',
             borderRadius: '50%',
-            background: '#0ba48b',
+            background: '#25D366',
             color: 'white',
             border: 'none',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+            boxShadow: '0 4px 15px rgba(0,0,0,0.2)',
             cursor: 'pointer',
-            transition: 'transform 0.2s'
+            transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+            padding: 0
           }}
-          onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'}
-          onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+          onMouseEnter={e => {
+            e.currentTarget.style.transform = 'scale(1.1)';
+            e.currentTarget.style.boxShadow = '0 8px 20px rgba(0,0,0,0.3)';
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.transform = 'scale(1)';
+            e.currentTarget.style.boxShadow = '0 4px 15px rgba(0,0,0,0.2)';
+          }}
         >
-          {isChatOpen ? <X size={36} /> : (
-            <>
-              <svg viewBox="0 0 24 24" width="48" height="48" fill="currentColor">
-                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-              </svg>
-              {/* Red dot indicator */}
-              {!hasReadChat && (
-                <div style={{ position: 'absolute', top: '14px', right: '14px', width: '14px', height: '14px', background: '#ef4444', borderRadius: '50%', border: '2px solid #0ba48b' }}></div>
-              )}
-            </>
-          )}
+          <svg viewBox="0 0 24 24" width="40" height="40" fill="white">
+            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+          </svg>
         </button>
       </div>
     </>

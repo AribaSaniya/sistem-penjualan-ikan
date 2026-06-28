@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { supabase } from '../services/supabaseClient';
 
+import type { Session } from '@supabase/supabase-js';
+
 interface User {
   id: string;
   name: string;
@@ -11,9 +13,9 @@ interface User {
 
 interface AuthState {
   user: User | null;
-  session: any | null;
+  session: Session | null;
   loading: boolean;
-  setUser: (user: User | null, session: any | null) => void;
+  setUser: (user: User | null, session: Session | null) => void;
   initialize: () => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -32,11 +34,15 @@ export const useAuthStore = create<AuthState>((set) => ({
         .eq('id', session.user.id)
         .single();
       
-      set({ 
-        session, 
-        user: profile ? { id: profile.id, name: profile.name, email: session.user.email!, role: profile.role, phone: session.user.user_metadata?.phone || '' } : null,
-        loading: false 
-      });
+      const userData = {
+        id: session.user.id,
+        name: profile?.name || session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
+        email: session.user.email!,
+        role: session.user.email === 'pengelolatpi@gmail.com' ? 'admin' : (profile?.role || session.user.user_metadata?.role || 'user'),
+        phone: profile?.phone || session.user.user_metadata?.phone || ''
+      };
+
+      set({ session, user: userData, loading: false });
     } else {
       set({ session: null, user: null, loading: false });
     }
@@ -49,11 +55,16 @@ export const useAuthStore = create<AuthState>((set) => ({
           .select('*')
           .eq('id', session.user.id)
           .single();
-        set({ 
-          session, 
-          user: profile ? { id: profile.id, name: profile.name, email: session.user.email!, role: profile.role, phone: session.user.user_metadata?.phone || '' } : null,
-          loading: false 
-        });
+          
+        const userData = {
+          id: session.user.id,
+          name: profile?.name || session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
+          email: session.user.email!,
+          role: session.user.email === 'pengelolatpi@gmail.com' ? 'admin' : (profile?.role || session.user.user_metadata?.role || 'user'),
+          phone: profile?.phone || session.user.user_metadata?.phone || ''
+        };
+
+        set({ session, user: userData, loading: false });
       } else {
         set({ session: null, user: null, loading: false });
       }
