@@ -144,7 +144,8 @@ export default function Home() {
       });
 
       if (error) throw error;
-      if (data.status === 'error') throw new Error(data.message);
+      if (!data) throw new Error('Tidak ada respons dari sistem.');
+      if (data?.status === 'error') throw new Error(data?.message || 'Gagal memproses pesanan.');
 
       incrementCount(); // Update badge instantly
       setBuyingFish(null);

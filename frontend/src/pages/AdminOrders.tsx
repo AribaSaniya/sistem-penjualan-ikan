@@ -49,15 +49,15 @@ export default function AdminOrders() {
         .from('orders')
         .select(`
           id, created_at, status, user_id, total_amount,
-          profiles!orders_user_id_fkey(name),
+          profiles(name),
           order_items(id, quantity_kg, price_at_buy, fish(name))
         `)
         .neq('status', 'cancelled')
         .order('created_at', { ascending: false });
 
       if (error) {
-        // Fallback to query without profiles relation if it fails
-        console.warn('Join with profiles failed, fetching without join');
+        console.warn('Join with profiles failed, fetching without join:', error.message);
+        // Fallback to query without profiles relation
         const { data: fallbackData, error: fbError } = await supabase
           .from('orders')
           .select(`
@@ -80,7 +80,10 @@ export default function AdminOrders() {
         
         const uids = [...new Set(fallbackData?.map(o => o.user_id))].filter(id => !!id);
         if (uids.length > 0) {
-          const { data: pData } = await supabase.from('profiles').select('id, name').in('id', uids);
+          const { data: pData, error: pError } = await supabase.from('profiles').select('id, name').in('id', uids);
+          if (pError) {
+            console.warn('Gagal mengambil profil pembeli:', pError.message);
+          }
           const pMap: Record<string, string> = {};
           pData?.forEach(p => pMap[p.id] = p.name);
           setProfiles(pMap);

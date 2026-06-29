@@ -38,9 +38,16 @@ export default function MarketChart() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const { data: fishRes } = await supabase.from('fish').select('id, name, price_per_kg, market_price');
-        const { data: itemsRes } = await supabase.from('order_items').select('quantity_kg, fish_id');
+        const { data: fishRes, error: fishErr } = await supabase.from('fish').select('id, name, price_per_kg, market_price');
+        const { data: itemsRes, error: itemsErr } = await supabase.from('order_items').select('quantity_kg, fish_id');
 
+        if (fishErr) {
+          console.error('Gagal mengambil data ikan:', fishErr.message);
+          return;
+        }
+        if (itemsErr) {
+          console.error('Gagal mengambil data penjualan:', itemsErr.message);
+        }
 
         if (!fishRes) return;
 

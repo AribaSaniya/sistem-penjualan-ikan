@@ -353,6 +353,33 @@ export default function AdminSales() {
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <input required placeholder="Nama Pedagang" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} style={{ padding: '12px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid rgba(255,255,255,0.1)' }} />
               <input required placeholder="Spesialisasi" value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})} style={{ padding: '12px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid rgba(255,255,255,0.1)' }} />
+              <div>
+                <label style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '6px', display: 'block' }}>Rating</label>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  {[1,2,3,4,5].map(s => (
+                    <Star key={s} size={28} onClick={() => setFormData({...formData, rating: String(s)})} fill={s <= Math.round(parseFloat(formData.rating)) ? "#FBBF24" : "transparent"} color="#FBBF24" style={{ cursor: 'pointer' }} />
+                  ))}
+                  <span style={{ marginLeft: '8px', fontWeight: 700, color: '#FBBF24' }}>{formData.rating}</span>
+                </div>
+              </div>
+              <div>
+                <label style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '6px', display: 'block' }}>Foto Pedagang</label>
+                <div style={{ border: '2px dashed var(--border-color)', padding: '16px', borderRadius: '8px', textAlign: 'center', cursor: 'pointer', background: 'rgba(0,0,0,0.1)' }}
+                  onClick={() => document.getElementById('merchant-image-input')?.click()}>
+                  {formData.imageFile ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
+                      <img src={URL.createObjectURL(formData.imageFile)} style={{ width: '50px', height: '50px', borderRadius: '4px', objectFit: 'cover' }} alt="Preview" />
+                      <span style={{ fontSize: '0.75rem', color: 'var(--accent-color)' }}>{formData.imageFile.name} (Ganti)</span>
+                    </div>
+                  ) : (
+                    <div style={{ color: 'var(--text-muted)' }}>
+                      <ImageIcon size={20} style={{ marginBottom: '6px' }} />
+                      <p style={{ fontSize: '0.8rem' }}>Klik untuk pilih gambar</p>
+                    </div>
+                  )}
+                </div>
+                <input id="merchant-image-input" type="file" accept="image/*" onChange={e => setFormData({...formData, imageFile: e.target.files?.[0] || null})} style={{ display: 'none' }} />
+              </div>
               <button disabled={isSaving} className="btn-primary" style={{ padding: '14px' }}>{isSaving ? 'Menyimpan...' : 'Simpan'}</button>
             </form>
           </div>

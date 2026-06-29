@@ -21,6 +21,7 @@ export default function PortalAuth() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
+  const [otpSubmitting, setOtpSubmitting] = useState(false);
   
   const navigate = useNavigate();
 
@@ -170,6 +171,8 @@ export default function PortalAuth() {
   };
 
   const verifyOTP = async (otpCode: string) => {
+    if (otpSubmitting || loading) return;
+    setOtpSubmitting(true);
     setError('');
     setLoading(true);
     try {
@@ -223,6 +226,7 @@ export default function PortalAuth() {
       setError(error.message || 'Kode OTP salah atau sudah kadaluarsa.');
     } finally {
       setLoading(false);
+      setOtpSubmitting(false);
     }
   };
 
@@ -463,8 +467,8 @@ export default function PortalAuth() {
                           nextInput?.focus();
                         }
                         
-                        // Auto submit if complete
-                        if (finalOtp.length === 6 && !finalOtp.includes(' ')) {
+                        // Auto submit if complete (dengan guard double-fire)
+                        if (!otpSubmitting && finalOtp.length === 6 && !finalOtp.includes(' ')) {
                           verifyOTP(finalOtp);
                         }
                       }
