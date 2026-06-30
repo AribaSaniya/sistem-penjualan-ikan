@@ -180,3 +180,11 @@ Realtime sync: tabel `fish` dan `orders` untuk update langsung.
 ## Lisensi
 
 MIT
+
+---
+
+## Author
+
+**NAMA : ARIBA SANIYA SAFINATUNNAJAH**  
+**NIM : 101230079**  
+**KELAS : TF23B**
